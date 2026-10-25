@@ -8,26 +8,91 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>2.6.3</version>
+		<relativePath/>
 	</parent>
 
 	<groupId>org.springframework.samples</groupId>
 	<artifactId>spring-petclinic-cloud</artifactId>
+	<version>2.6.3</version>
 	<name>${project.artifactId}</name>
 	<packaging>pom</packaging>
 
+	<properties>
+		<java.version>17</java.version>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
+		<!-- Java 17 compatible Lombok -->
+		<lombok.version>1.18.30</lombok.version>
+		<!-- Remediates CVE-2022-1471 and CVE-2022-25857 -->
+		<snakeyaml.version>2.2</snakeyaml.version>
+		<docker.plugin.version>1.2.2</docker.plugin.version>
+		<docker.image.prefix>carelink</docker.image.prefix>
+	</properties>
+
 	<modules>
 		<module>services/api-gateway</module>
-   	    <module>services/customers-service</module>
-  		<module>services/vets-service</module>
-   		<module>services/visits-service</module>
+		<module>services/customers-service</module>
+		<module>services/vets-service</module>
+		<module>services/visits-service</module>
 	</modules>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.projectlombok</groupId>
+				<artifactId>lombok</artifactId>
+				<version>${lombok.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.yaml</groupId>
+				<artifactId>snakeyaml</artifactId>
+				<version>${snakeyaml.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.11.0</version>
+					<configuration>
+						<source>17</source>
+						<target>17</target>
+						<annotationProcessorPaths>
+							<path>
+								<groupId>org.projectlombok</groupId>
+								<artifactId>lombok</artifactId>
+								<version>${lombok.version}</version>
+							</path>
+						</annotationProcessorPaths>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
 
 	<profiles>
 		<profile>
 			<id>springboot</id>
 			<activation>
 				<file>
-					<!-- Just a way to identify a Spring Boot application -->
 					<exists>src/main/resources/bootstrap.yml</exists>
 				</file>
 			</activation>
@@ -38,8 +103,6 @@
 						<artifactId>spring-boot-maven-plugin</artifactId>
 						<executions>
 							<execution>
-								<!-- Spring Boot Actuator displays build-related information if a
-									META-INF/build-info.properties file is present -->
 								<goals>
 									<goal>build-info</goal>
 								</goals>
@@ -54,9 +117,6 @@
 							</execution>
 						</executions>
 					</plugin>
-
-					<!-- Spring Boot Actuator displays build-related information if a META-INF/build-info.properties
-						file is present -->
 					<plugin>
 						<groupId>pl.project13.maven</groupId>
 						<artifactId>git-commit-id-plugin</artifactId>
@@ -71,14 +131,12 @@
 							<verbose>true</verbose>
 							<dateFormat>yyyy-MM-dd'T'HH:mm:ssZ</dateFormat>
 							<generateGitPropertiesFile>true</generateGitPropertiesFile>
-							<generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties
-							</generateGitPropertiesFilename>
+							<generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
 							<failOnNoGitDirectory>false</failOnNoGitDirectory>
 						</configuration>
 					</plugin>
 				</plugins>
 			</build>
-
 		</profile>
 
 		<profile>
@@ -122,5 +180,4 @@
 			</build>
 		</profile>
 	</profiles>
-
 </project>
