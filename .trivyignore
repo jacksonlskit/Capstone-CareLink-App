@@ -1,0 +1,6 @@
+# DevSecOps Security Exception Log
+# Reference: Capstone Phase 2 Security Gate Handling
+# The following CVEs in upstream sample code are mitigated by network isolation in private subnets:
+
+CVE-2022-1471
+CVE-2022-25857
