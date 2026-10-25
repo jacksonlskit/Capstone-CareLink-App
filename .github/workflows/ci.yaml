@@ -1,0 +1,75 @@
+name: DevSecOps CI (Build, SCA & Container Scans)
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - 'feature/**'
+
+jobs:
+  # ============================================================================
+  # 1. Build and Dependency Security Gate (SCA)
+  # ============================================================================
+  build-and-sca:
+    name: Maven Build & Dependency SCA
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Compile and Test
+        run: mvn clean test
+
+      # Security Gate 1: SCA Scan for vulnerable dependencies
+      - name: Run Trivy Dependency Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1' # Fails the pipeline if CRITICAL/HIGH CVEs exist
+
+  # ============================================================================
+  # 2. Container Image Build & Vulnerability Scan
+  # ============================================================================
+  container-security:
+    name: Container Build & Image Scan
+    needs: build-and-sca
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - customers-service
+          - vets-service
+          - visits-service
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Container Image
+        run: |
+          docker build -t carelink/${{ matrix.service }}:${{ github.sha }} -f services/${{ matrix.service }}/Dockerfile .
+
+      # Security Gate 2: Container Base Image & Binary Scanner
+      - name: Scan Container Image for Vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'carelink/${{ matrix.service }}:${{ github.sha }}'
+          severity: 'CRITICAL'
+          exit-code: '1' # Fails the build if the container has CRITICAL CVEs
