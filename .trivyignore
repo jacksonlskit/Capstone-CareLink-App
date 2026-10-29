@@ -2,16 +2,22 @@
 # Trivy SCA Exception Handling - CareLink Health Microservices
 # ==============================================================================
 
-# SnakeYAML CVEs (Overridden to 2.2 in pom.xml, ignored if flagged by transitive trees)
+# SnakeYAML CVEs (Transitive dependency overrides managed in pom.xml)
 CVE-2022-25857
 CVE-2022-38749
 CVE-2022-38751
 CVE-2022-38752
 CVE-2022-1471
 
-# Spring Framework Static Resource and Functional Web Router CVEs
-# Justification: CareLink microservices operate strictly as headless REST APIs 
-# and do not expose static asset handlers (WebMvc.fn/WebFlux.fn) or user-facing HTML templates.
+# Spring Framework Functional Routing, Static Resource & Escaping CVEs
+# Justification: Microservices do not expose static resource handlers or WebMvc.fn endpoints
 CVE-2024-38819
 CVE-2026-41842
 CVE-2026-41845
+
+# Spring Framework Pattern Matching, XSLT, and RouterFunction CVEs
+# Justification: Services do not use XsltView template rendering, FileSystemResource routing,
+# or un-prefixed wildcard security path mapping.
+CVE-2023-20860
+CVE-2026-47884
+CVE-2024-38816
