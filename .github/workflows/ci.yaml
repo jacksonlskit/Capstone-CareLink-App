@@ -1,26 +1,104 @@
-name: CI
+name: DevSecOps CI (Build, SCA & Container Scans)
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-      - master
-  pull_request:
+  push:
+    branches:
+      - 'feature/**'
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  # ============================================================================
+  # 1. Build and Dependency Security Gate (SCA)
+  # ============================================================================
+  build-and-sca:
+    name: Maven Build & Dependency SCA
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
           java-version: '17'
+          distribution: 'temurin'
           cache: maven
 
-      - name: Build and test with Maven
-        run: mvn -B verify
+      - name: Ensure Maven Wrapper Executable
+        run: chmod +x ./mvnw
+
+      - name: Compile and Test
+        run: ./mvnw clean test -B
+
+      # Security Gate 1: SCA Scan for vulnerable dependencies
+      - name: Run Trivy Dependency Vulnerability Scanner (SCA)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          trivyignores: '.trivyignore'
+
+  # ============================================================================
+  # 2. Container Image Build & Vulnerability Scan
+  # ============================================================================
+  container-security:
+    name: Container Build & Image Scan
+    needs: build-and-sca
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - customers-service
+          - vets-service
+          - visits-service
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Container Image
+        run: |
+          docker build \
+            -t carelink/${{ matrix.service }}:${{ github.sha }} \
+            -f services/${{ matrix.service }}/Dockerfile .
+
+      # Security Gate 2: Container Base Image & Runtime Scan
+      - name: Scan Container Image for Vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'carelink/${{ matrix.service }}:${{ github.sha }}'
+          severity: 'CRITICAL'
+          exit-code: '1'
+          trivyignores: '.trivyignore'
+
+  # ============================================================================
+  # 3. Aggregated Status Check for Branch Protection Rulesets
+  # ============================================================================
+  build:
+    name: build
+    needs:
+      - build-and-sca
+      - container-security
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check Status of Required CI Gates
+        run: |
+          if [ "${{ needs.build-and-sca.result }}" != "success" ] || [ "${{ needs.container-security.result }}" != "success" ]; then
+            echo "CI security gates or build tests failed."
+            exit 1
+          fi
+          echo "All Maven unit tests, Trivy SCA, and container scans passed successfully."

@@ -19,6 +19,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.16.2'
+
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -53,17 +58,18 @@ jobs:
 
       - name: Update Kubeconfig
         run: |
-          aws eks update-kubeconfig --region ${{ vars.AWS_REGION }} --name carelink-staging-cluster
+          aws eks update-kubeconfig --region ${{ vars.AWS_REGION }} --name carelink-staging-eks
 
       - name: Ensure Staging Namespace Exists
         run: |
           kubectl get namespace staging || kubectl create namespace staging
 
-      - name: Deploy to Staging via Kustomize
+      - name: Deploy to Staging via Helm
         run: |
-          cd k8s/overlays/staging
-          kustomize edit set image 255945442255.dkr.ecr.us-east-1.amazonaws.com/carelink-staging-api-gateway=255945442255.dkr.ecr.us-east-1.amazonaws.com/carelink-staging-api-gateway:${{ github.sha }}
-          kustomize edit set image 255945442255.dkr.ecr.us-east-1.amazonaws.com/carelink-staging-customers-service=255945442255.dkr.ecr.us-east-1.amazonaws.com/carelink-staging-customers-service:${{ github.sha }}
-          kustomize edit set image 255945442255.dkr.ecr.us-east-1.amazonaws.com/carelink-staging-vets-service=255945442255.dkr.ecr.us-east-1.amazonaws.com/carelink-staging-vets-service:${{ github.sha }}
-          kustomize edit set image 255945442255.dkr.ecr.us-east-1.amazonaws.com/carelink-staging-visits-service=255945442255.dkr.ecr.us-east-1.amazonaws.com/carelink-staging-visits-service:${{ github.sha }}
-          kubectl apply -k .
+          helm upgrade --install carelink-app ./helm/carelink-app \
+            --namespace staging \
+            --values ./helm/carelink-app/values.yaml \
+            --values ./helm/carelink-app/values-staging.yaml \
+            --set image.tag=${{ github.sha }} \
+            --wait \
+            --timeout 5m
