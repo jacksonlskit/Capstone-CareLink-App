@@ -88,6 +88,16 @@ CVE-2026-40984
 CVE-2026-41708
 
 # ------------------------------------------------------------------------------
+# Spring Cloud Gateway & WebFlux (api-gateway)
+# Justification: Gateway routes are statically declared in configuration without
+# dynamic SpEL expression parsing; functional predicate bypass does not affect
+# static YAML path routing.
+# ------------------------------------------------------------------------------
+CVE-2025-41235
+CVE-2025-41253
+CVE-2026-47892
+
+# ------------------------------------------------------------------------------
 # Spring Framework (Core, Web, WebMVC, Beans, Expression, Context)
 # Justification: Spring4Shell (CVE-2022-22965) requires WAR deployment on external
 # Tomcat; CareLink deploys executable fat JARs. Static web resource handlers,
