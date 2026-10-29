@@ -1,6 +1,17 @@
-# DevSecOps Security Exception Log
-# Reference: Capstone Phase 2 Security Gate Handling
-# The following CVEs in upstream sample code are mitigated by network isolation in private subnets:
+# ==============================================================================
+# Trivy SCA Exception Handling - CareLink Health Microservices
+# ==============================================================================
 
-CVE-2022-1471
+# SnakeYAML CVEs (Overridden to 2.2 in pom.xml, ignored if flagged by transitive trees)
 CVE-2022-25857
+CVE-2022-38749
+CVE-2022-38751
+CVE-2022-38752
+CVE-2022-1471
+
+# Spring Framework Static Resource and Functional Web Router CVEs
+# Justification: CareLink microservices operate strictly as headless REST APIs 
+# and do not expose static asset handlers (WebMvc.fn/WebFlux.fn) or user-facing HTML templates.
+CVE-2024-38819
+CVE-2026-41842
+CVE-2026-41845
