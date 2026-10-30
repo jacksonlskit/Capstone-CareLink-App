@@ -1,29 +1,33 @@
-# Stage 1: Build the artifact
-FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
+# ==============================================================================
+# Stage 1: Build Microservice via Maven Reactor
+# ==============================================================================
+FROM maven:3.8.8-eclipse-temurin-17 AS builder
 WORKDIR /build
 
-# Copy root pom and module poms for dependency caching
-COPY pom.xml ./pom.xml
-COPY services/vets-service/pom.xml ./services/vets-service/pom.xml
-COPY services/customers-service/pom.xml ./services/customers-service/pom.xml
-COPY services/vets-service/pom.xml ./services/vets-service/pom.xml
-COPY services/visits-service/pom.xml ./services/visits-service/pom.xml
+# Copy root POM and all service modules to satisfy Maven reactor structure
+COPY pom.xml ./
+COPY services ./services
 
-# Copy service source code
-COPY services/vets-service/src ./services/vets-service/src
-
-# Package target microservice
+# Build only vets-service and its dependencies
 RUN mvn -pl services/vets-service -am clean package -DskipTests
 
-# Stage 2: Hardened runtime
-FROM eclipse-temurin:17-jre-alpine AS runner
+# ==============================================================================
+# Stage 2: Hardened, Unprivileged Runtime Environment
+# ==============================================================================
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-# Run as non-root user (Security Gate Requirement)
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
+# Upgrade Alpine base packages to resolve known OS CVEs (including brotli-libs)
+# and create unprivileged non-root user
+RUN apk upgrade --no-cache && \
+    addgroup -S appgroup && \
+    adduser -S appuser -G appgroup
 
-COPY --from=builder --chown=appuser:appgroup /build/services/vets-service/target/*.jar app.jar
+# Copy compiled executable JAR from builder stage
+COPY --from=builder /build/services/vets-service/target/*.jar app.jar
 
-EXPOSE 8080
+USER appuser:appgroup
+
+EXPOSE 8082
+
 ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
