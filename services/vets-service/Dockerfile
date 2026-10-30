@@ -17,8 +17,11 @@ RUN mvn -pl services/vets-service -am clean package -DskipTests
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-# DevSecOps Enforcement: Run as unprivileged non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Upgrade Alpine base packages to resolve known OS CVEs (including brotli-libs)
+# and create unprivileged non-root user
+RUN apk upgrade --no-cache && \
+    addgroup -S appgroup && \
+    adduser -S appuser -G appgroup
 
 # Copy compiled executable JAR from builder stage
 COPY --from=builder /build/services/vets-service/target/*.jar app.jar

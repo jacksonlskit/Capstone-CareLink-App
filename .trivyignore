@@ -1,7 +1,14 @@
 # ==============================================================================
-# Trivy SCA Exception Handling - CareLink Health Microservices
+# Trivy SCA & Container Exception Handling - CareLink Health Microservices
 # Phase 2 DevSecOps Architectural Risk Exceptions
 # ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Base Image OS Packages (Alpine Linux)
+# Justification: Brotli decompression is not invoked by headless JSON microservices.
+# Base OS packages are patched via apk upgrade during docker build.
+# ------------------------------------------------------------------------------
+CVE-2026-111497
 
 # ------------------------------------------------------------------------------
 # SnakeYAML
