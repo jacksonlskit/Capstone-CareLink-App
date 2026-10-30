@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: customers-service
+  namespace: staging
   labels:
     app: customers-service
 spec:
@@ -14,43 +15,49 @@ spec:
       labels:
         app: customers-service
     spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: customers-service
       containers:
         - name: customers-service
-          image: carelink-customers-service
+          image: 255945442255.dkr.ecr.us-east-1.amazonaws.com/carelink-staging-customers-service:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8080
+            - containerPort: 8081
+          env:
+            - name: SERVER_PORT
+              value: "8081"
+            - name: MANAGEMENT_ENDPOINT_RESTART_ENABLED
+              value: "true"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
           resources:
             requests:
-              cpu: 250m
-              memory: 512Mi
+              cpu: "150m"
+              memory: "384Mi"
             limits:
-              cpu: 500m
-              memory: 1024Mi
-          readinessProbe:
+              cpu: "500m"
+              memory: "600Mi"
+          startupProbe:
             httpGet:
-              path: /actuator/health/readiness
-              port: 8080
-            initialDelaySeconds: 30
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 25
             periodSeconds: 10
+            failureThreshold: 30
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
-              port: 8080
-            initialDelaySeconds: 45
+              port: 8081
             periodSeconds: 15
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: customers-service
-  labels:
-    app: customers-service
-spec:
-  type: ClusterIP
-  ports:
-    - port: 8080
-      targetPort: 8080
-      name: http
-  selector:
-    app: customers-service
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            periodSeconds: 10
+            failureThreshold: 3
